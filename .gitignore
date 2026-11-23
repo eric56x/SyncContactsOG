@@ -1,0 +1,16 @@
+﻿data/
+contacts/
+config.json
+*.db
+*.db-journal
+*.xlsx
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.spec
+*.exe
+releases/
+
+credentials*.json
