@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SyncContactsOG v1.1.1 — Architecture &amp; Best Practices</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; color: #1e293b; background: #f8fafc; }
+  h1 { color: #0f172a; border-bottom: 2px solid #1a73e8; padding-bottom: 0.4rem; }
+  h2 { color: #1a73e8; margin-top: 2rem; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.25rem; }
+  h3 { color: #334155; margin-top: 1.3rem; }
+  code { background: #e2e8f0; padding: 0.15rem 0.35rem; border-radius: 4px; font-family: Consolas, monospace; font-size: 0.9em; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 1.1rem 1.25rem; border-radius: 8px; overflow-x: auto; line-height: 1.45; }
+  pre code { background: transparent; color: inherit; padding: 0; white-space: pre; display: block; }
+  ul { padding-left: 1.4rem; }
+  li { margin-bottom: 0.35rem; }
+  hr { border: 0; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
+</style>
+</head>
+<body>
+<p>﻿# Architecture &amp; Engineering Best Practices (Blueprint v1.1.1)</p>
+<p>This document defines the architectural, security, UI/UX, build, and GitHub release standards established for <strong>SyncContactsOG v1.1.1</strong>. It is designed both as the technical reference for this repository and as a reusable blueprint for future portable Windows desktop applications built with Python.</p>
+<hr>
+<h2>1. Standard GitHub Repository Structure</h2>
+<p>A clean separation between application code, developer utilities, documentation, user runtime data, and release artifacts ensures maintainability and prevents accidental secret leaks.</p>
+<pre><code>ProjectRoot/
+├── .gitignore                      # Strictly excludes data/, contacts/, secrets, caches, binaries
+├── CHANGELOG.md                    # Single source of truth for version history (Keep a Changelog)
+├── LICENSE                         # Open-source license (e.g., GPL-3.0)
+├── README.md                       # English entry point with architecture overview &amp; doc links
+├── requirements.txt                # Pinned minimum Python dependencies
+├── source/                         # Pure application source code (compiled by PyInstaller)
+│   ├── SyncContactsOG.py           # Main entry point &amp; UI/Sync engine
+│   ├── SyncContactsOG.ico          # Application icon embedded in EXE &amp; Toplevel dialogs
+│   └── build.ps1                   # Isolated build &amp; packaging pipeline
+├── tools/                          # Standalone developer &amp; documentation automation scripts
+│   ├── generate_specs_from_code.py # Extracts constants/modes from source to update specs
+│   ├── convert_md_2_html.py        # Renders Markdown docs into styled offline HTML files
+│   └── validate_credentialsJSON.py # CLI validator for Google OAuth credentials.json
+├── docs/                           # Lowercase documentation assets (Markdown + generated HTML)
+│   ├── best-practices.md           # This engineering blueprint (Markdown source)
+│   ├── best-practices.html         # Auto-generated HTML for offline viewing / GitHub Pages
+│   ├── specifications-en.md        # Functional &amp; technical specifications (English)
+│   ├── specifications-en.html      # Auto-generated HTML (English)
+│   ├── specifications-fr.md        # Functional &amp; technical specifications (French)
+│   ├── specifications-fr.html      # Auto-generated HTML (French)
+│   └── changelog.html              # Auto-generated HTML from root CHANGELOG.md
+├── data/                           # [GITIGNORED] Portable OAuth client config (token stored in HKCU DPAPI)
+│   └── credentials.json            # User&#x27;s Google Cloud OAuth Desktop client secrets (token is in HKCU DPAPI)
+├── contacts/                       # [GITIGNORED] Portable local backup snapshots
+│   ├── contacts.db                 # SQLite relational snapshot &amp; delta sync cache
+│   └── contacts.xlsx               # Human-readable Excel export
+└── releases/                       # [GITIGNORED] Local release staging archives
+    └── v1.1.1/
+        ├── SyncContactsOG-v1.1.1-win64.zip
+        ├── SyncContactsOG-v1.1.1-source.zip
+        ├── SHA256SUMS.txt
+        └── RELEASE_NOTES.md</code></pre>
+<h3>Naming Conventions</h3>
+<ul>
+<li><strong>Repository Root</strong>: Uppercase for standard GitHub meta files (<code>README.md</code>, <code>CHANGELOG.md</code>, <code>LICENSE</code>) so they stand out at the top of the file tree.</li>
+<li><strong><code>docs/</code> Folder</strong>: Lowercase kebab-case (<code>best-practices.md</code>, <code>specifications-en.md</code>) for clean URLs on GitHub and GitHub Pages. Markdown (<code>.md</code>) is the single source of truth; HTML (<code>.html</code>) files are generated automatically for offline distribution.</li>
+<li><strong><code>tools/</code> vs <code>source/</code></strong>: Keep build, validation, and documentation generators in <code>tools/</code> so PyInstaller only bundles runtime dependencies from <code>source/</code>.</li>
+</ul>
+<hr>
+<h2>2. Portable Application Architecture</h2>
+<p>To run without administrator rights, MSI installers, or registry modifications:</p>
+<ul>
+<li><strong>Bundled Assets (<code>_MEIPASS</code>)</strong>: Read-only assets packaged inside the executable (such as <code>.ico</code> icons) must be resolved via <code>getattr(sys, &quot;_MEIPASS&quot;, os.path.dirname(os.path.abspath(__file__)))</code>.</li>
+<li><strong>Persistent User Data (<code>sys.executable</code> directory)</strong>: Writable runtime folders (<code>.\data\</code>, <code>.\contacts\</code>) and configuration files (<code>config.json</code>) must always resolve relative to <code>os.path.dirname(sys.executable)</code> when frozen (<code>getattr(sys, &quot;frozen&quot;, False)</code>), or <code>os.path.dirname(os.path.abspath(__file__))</code> when run from source.</li>
+<li><strong>Zero OS Keyring Dependency</strong>: Never rely on Windows Credential Manager (<code>keyring</code>) for portable apps; moving the folder to another PC would break authentication. Store validated JSON credentials and tokens inside <code>.\data\</code>.</li>
+</ul>
+<hr>
+<h2>3. OAuth 2.0 &amp; API Security Practices (Google People API v1)</h2>
+<ul>
+<li><strong>Pre-Flight JSON Schema Validation</strong>: Before initiating any OAuth flow, parse <code>.\data\credentials.json</code> and verify that it contains a valid <code>&quot;installed&quot;</code> or <code>&quot;web&quot;</code> object with non-empty <code>&quot;client_id&quot;</code> and <code>&quot;client_secret&quot;</code> keys.</li>
+<li><strong>Encrypted Windows Registry Token Storage (<code>HKCU\Software\SyncContactsOG</code> + DPAPI)</strong>:</li>
+<li>Encrypt the serialized token JSON using Windows DPAPI (<code>win32crypt.CryptProtectData</code>) bound to the current Windows user session <strong>and</strong> an application-specific entropy (<code>SyncContactsOG::OAuth2::DPAPI::v1</code>), storing the resulting <code>REG_BINARY</code> blob in <code>HKEY_CURRENT_USER\Software\SyncContactsOG\GoogleOAuthTokenDPAPI</code> (no administrator rights required).</li>
+<li>Load and decrypt via <code>CryptUnprotectData</code>, refresh silently via <code>creds.refresh(Request())</code>, or trigger <code>InstalledAppFlow.run_local_server(port=0)</code> on first sign-in.</li>
+<li><strong>Minimal Least-Privilege Scope &amp; Verification</strong>:</li>
+<li>Request only <code>https://www.googleapis.com/auth/contacts</code>.</li>
+<li>Verify connectivity by calling <code>service.people().connections().list(resourceName=&quot;people/me&quot;, pageSize=1, personFields=&quot;names&quot;).execute()</code> rather than <code>people().get(resourceName=&quot;people/me&quot;)</code>, which requires an extra <code>profile</code> scope and triggers <code>HttpError 403</code>.</li>
+<li><strong>Repository Secret Hygiene</strong>:</li>
+<li><code>.gitignore</code> must explicitly block <code>data/</code>, <code>contacts/</code>, <code>config.json</code>, <code>credentials<em>.json</code>, <code></em>.db</code>, and <code>*.xlsx</code>.</li>
+<li>Release ZIP archives must include only neutral <code>README.txt</code> placeholders inside empty <code>data/</code> and <code>contacts/</code> folders.</li>
+</ul>
+<hr>
+<h2>4. Desktop UI/UX &amp; Threading Standards (CustomTkinter)</h2>
+<ul>
+<li><strong>Non-Blocking Background Workers</strong>: All network calls (OAuth browser flow, Google People API pagination) and COM operations (Outlook contact scanning) must run inside daemon <code>threading.Thread</code> workers. UI updates (progress bars, log insertion, button state changes) must be marshaled back to the main thread via <code>self.after(0, callback)</code>.</li>
+<li><strong>High-DPI &amp; Grid Layout Discipline</strong>:</li>
+<li>Never assign <code>weight=1</code> to fixed-height header or progress bar rows in <code>grid_rowconfigure()</code>. Always set <code>weight=0</code> on status/progress containers and <code>weight=1</code> exclusively on expandable log or data viewers.</li>
+<li>Avoid hardcoded pixel heights on multi-line text containers; use <code>wraplength</code> and natural padding so text never clips at 125% or 150% Windows DPI scaling.</li>
+<li><strong>Actionable Visual Feedback</strong>:</li>
+<li>Highlight missing prerequisites (e.g., missing <code>credentials.json</code> or unconnected Google account) using primary action colors (blue <code>#1a73e8</code>), and transition buttons to neutral styling once verified alongside a clear status indicator (<code>✓</code> / <code>✗</code>).</li>
+<li>Keep modal configuration dialogs open after importing credentials so the user can observe live connection diagnostics before closing.</li>
+<li><strong>Dynamic Localization (EN / FR)</strong>: Centralize all UI labels in a translation dictionary and bind language toggles to a refresh method that updates widget text in real time without requiring an application restart.</li>
+</ul>
+<hr>
+<h2>5. Data Integrity &amp; Synchronization Safeguards</h2>
+<ul>
+<li><strong>Incremental Delta Caching</strong>: Compute deterministic hashes of contact fields and photos in SQLite (<code>.\contacts\contacts.db</code>) so subsequent runs only process modified records, while offering a <em>Force Full Compare</em> override.</li>
+<li><strong>Pre-Write Snapshots</strong>: Automatically export both relational (<code>contacts.db</code>) and tabular (<code>contacts.xlsx</code>) backups before applying destructive changes.</li>
+<li><strong>Deletion Guardrails</strong>: Enforce a configurable deletion threshold alert and an interactive confirmation prompt (<code>Prompt Deletion</code>), plus a zero-contact safety abort if a source unexpectedly returns <code>0</code> records when linked contacts exist.</li>
+<li><strong>Dry-Run Simulation Mode</strong>: Support full comparison and logging without executing write/delete mutations on Outlook or Google.</li>
+</ul>
+<hr>
+<h2>6. Build, Packaging &amp; GitHub Release Pipeline (<code>source/build.ps1</code>)</h2>
+<ul>
+<li><strong>Syntax &amp; Static Gate</strong>: Run <code>py_compile</code> on <code>source/SyncContactsOG.py</code> before invoking PyInstaller to fail fast on syntax errors.</li>
+<li><strong>Out-of-Tree Compilation</strong>: Configure PyInstaller <code>--workpath</code>, <code>--distpath</code>, and <code>--specpath</code> inside <code>C:\Temp\Build_&lt;App&gt;_v&lt;Version&gt;\</code>. Compiling outside OneDrive/cloud-synced folders prevents file-locking errors (<code>PermissionDenied</code>) and keeps the working tree clean.</li>
+<li><strong>Standardized GitHub Release Assets</strong>:</li>
+<li><code>SyncContactsOG-vX.Y.Z-win64.zip</code>: Portable executable, <code>README.md</code>, <code>CHANGELOG.md</code>, <code>LICENSE</code>, <code>docs/</code>, and clean <code>data/</code> + <code>contacts/</code> folders.</li>
+<li><code>SyncContactsOG-vX.Y.Z-source.zip</code>: Clean <code>source/</code>, <code>tools/</code>, <code>docs/</code>, <code>requirements.txt</code>, <code>.gitignore</code>, <code>README.md</code>, <code>CHANGELOG.md</code>, and <code>LICENSE</code>.</li>
+<li><code>SHA256SUMS.txt</code>: Lowercase SHA-256 digests for all release archives.</li>
+</ul>
+</body>
+</html>

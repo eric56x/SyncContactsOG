@@ -1,0 +1,186 @@
+﻿<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>SyncContactsOG v1.0.11 - Specifications</title><style>body{font-family:"Segoe UI",system-ui,sans-serif;background:#f4f6f9;color:#1f2937;margin:0;padding:32px 16px;line-height:1.6}.container{max-width:960px;margin:0 auto;background:#fff;padding:40px 48px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.06)}h1{color:#0f172a;font-size:26px;border-bottom:2px solid #2563eb;padding-bottom:10px;margin-top:0}h2{color:#1e3a8a;font-size:20px;margin-top:32px;border-left:4px solid #2563eb;padding-left:12px}h3{color:#334155;font-size:16px;margin-top:22px}h4{color:#1f2937;font-size:15px;background:#f8fafc;padding:8px 12px;border-radius:6px;margin-top:18px}p,li{font-size:14.5px;color:#374151}code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}hr{border:none;border-top:1px solid #e2e8f0;margin:28px 0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}th{background:#1e3a8a;color:#fff;text-align:left;padding:10px 12px}td{border-bottom:1px solid #e2e8f0;padding:10px 12px;vertical-align:top}tr:nth-child(even) td{background:#f8fafc}.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600}.badge.ok{background:#dcfce7;color:#166534}.badge.warn{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}@media print{body{background:#fff;padding:0}.container{box-shadow:none;padding:0}}</style></head><body><div class="container"><p>﻿# Functional, Technical Specifications &amp; Screen Guide — SyncContactsOG</p>
+<ul>
+<li><strong>Current Version</strong> : <code>1.0.11</code></li>
+<li><strong>Last Updated</strong> : <code>2026-11-22</code></li>
+<li><strong>Target Platform</strong> : Windows 10 / Windows 11 (x64)</li>
+<li><strong>Tech Stack</strong> : Python 3.12, CustomTkinter, PyWin32 (MAPI/COM), Microsoft Graph API, Google People API, SQLite, OpenPyXL, PyInstaller</li>
+</ul>
+<hr>
+<h2>1. Global Objective &amp; Scope</h2>
+<h3>1.1 Purpose</h3>
+<p><strong>SyncContactsOG</strong> is a portable Windows desktop application designed to reliably synchronize, unify, and archive address books between <strong>Microsoft Outlook</strong> (Classic desktop client or Microsoft 365 cloud account) and <strong>Google Contacts</strong>.</p>
+<h3>1.2 Scope</h3>
+<ul>
+<li><strong>In-Scope</strong>:</li>
+<li>One-way and two-way synchronization of personal contacts.</li>
+<li>High data fidelity preservation (structured names, <code>FileAs</code>, multiple phone numbers, postal addresses, rich RTF notes, categories/labels, and high-resolution contact photos).</li>
+<li>Browsable local archiving (SQLite database with binary photos + <code>.xlsx</code> Excel workbook).</li>
+<li>Interactive execution (GUI) and background execution (Windows System Tray / Windows startup).</li>
+<li><strong>Out-of-Scope</strong>:</li>
+<li>Synchronization of calendars, tasks, or emails.</li>
+<li>Simultaneous multi-account synchronization within a single running instance.</li>
+</ul>
+<hr>
+<h2>2. Actors &amp; Execution Modes</h2>
+<table><thead><tr><th>Execution Mode</th><th>Trigger</th><th>Expected Behavior</th></tr></thead><tbody>
+<tr><td><strong>Interactive (GUI)</strong></td><td>Manual launch of <code>SyncContactsOG.exe</code></td><td>Displays the main window, allowing configuration, simulation (<em>Dry-Run</em>), and manual sync execution.</td></tr>
+<tr><td><strong>Background (Tray)</strong></td><td>Closing window (when enabled) or <code>--minimized</code> CLI flag</td><td>Minimizes the app to the Windows System Tray and runs scheduled background syncs at configured intervals.</td></tr>
+</tbody></table>
+<hr>
+<h2>3. Functional Requirements</h2>
+<ul>
+<li><strong>FR-01 — Dual-Source Connectivity</strong>:</li>
+<li><em>Outlook</em>: Supports local <strong>Outlook Classic (COM/MAPI)</strong> and cloud <strong>Microsoft 365 (Graph API OAuth2)</strong> connectors.</li>
+<li><em>Google</em>: Connects via <strong>Google People API (OAuth2)</strong> with automatic silent token refresh.</li>
+<li><strong>FR-02 — Synchronization Modes</strong>:</li>
+<li><code>OUTLOOK_TO_GOOGLE_ONLY</code>: One-way propagation from Outlook to Google (production-validated mode).</li>
+<li><code>GOOGLE_TO_OUTLOOK_ONLY</code>: One-way propagation from Google to Outlook.</li>
+<li><code>MERGE_OUTLOOK_WINS</code>: Two-way sync where Outlook overwrites Google on conflicting changes.</li>
+<li><code>MERGE_GOOGLE_WINS</code>: Two-way sync where Google overwrites Outlook on conflicting changes.</li>
+<li><code>MERGE_PROMPT</code>: Two-way sync opening an interactive conflict resolution dialog for each conflict.</li>
+<li><strong>FR-03 — Advanced Field Preservation</strong>:</li>
+<li>Optional enforcement of <code>FileAs</code> formatting (<code>Name SURNAME</code> or <code>SURNAME, Name</code>).</li>
+<li>Protection of rich-text (RTF) Outlook notes against plain-text overwrites from Google unless explicitly forced.</li>
+<li>Two-way contact photo sync using SHA-256 hash comparison.</li>
+<li>Bidirectional mapping between Outlook categories and Google Contact labels (groups).</li>
+<li><strong>FR-04 — Deletion Safety &amp; Simulation</strong>:</li>
+<li><strong>Dry-Run Mode</strong>: Runs full diff analysis and preview logging without modifying any data.</li>
+<li>Automatic safety abort if deletion count exceeds <code>max_deletions_threshold</code> or if a source unexpectedly returns 0 contacts when the mapping database is non-empty.</li>
+<li>Automatic JSON backup of deleted contacts into <code>backups/</code> prior to deletion.</li>
+<li><strong>FR-05 — Resilient Local Archiving (<code>.db</code> + <code>.xlsx</code>)</strong>:</li>
+<li>Automatically created inside <code>&lt;exe_folder&gt;\contacts\</code> when write permissions are available.</li>
+<li>Interactive folder picker fallback if the executable directory is read-only.</li>
+<li>Free disk space check prior to writing: if disk space is insufficient, existing archive files are safely renamed with a <code>_NOT_UP_TO_DATE</code> suffix.</li>
+</ul>
+<hr>
+<h2>4. Functional &amp; Technical Assumptions</h2>
+<h3>4.1 Functional Assumptions</h3>
+<ul>
+<li>Every synchronized contact is persistently paired via the <code>(outlook_entry_id, google_resource_name)</code> tuple.</li>
+<li>Incremental (<em>Delta</em>) sync runs by default; a <em>Full Sync</em> runs manually or automatically whenever the last full sync is older than 7 days.</li>
+<li>The user has a configured local Outlook profile (for COM mode) or HTTPS network access to <code>graph.microsoft.com</code> and <code>people.googleapis.com</code>.</li>
+</ul>
+<h3>4.2 Technical Assumptions</h3>
+<ul>
+<li><strong>Zero-Pollution Portable Architecture</strong>: <code>SyncContactsOG.exe</code> is a self-contained <code>--onefile</code> binary. No technical files are written into the executable&#x27;s directory.</li>
+<li><strong>Technical Data Isolation</strong>: Sync state (<code>sync_state.db</code>), logs (<code>sync_details.log</code>), and deletion backups (<code>backups/</code>) reside in <code>%LOCALAPPDATA%\SyncContactsOG\</code>.</li>
+<li><strong>Credential Security</strong>: OAuth client secrets (<code>credentials.json</code>) are embedded into the binary at build time, and user OAuth tokens are encrypted inside <strong>Windows Credential Manager</strong>. App preferences are persisted in the Windows Registry (<code>HKCU\Software\OutlookGoogleSyncPro</code>).</li>
+<li><strong>Single-Instance Enforcement</strong>: A system-wide Windows Mutex (<code>Local\SyncContactsOG_SingleInstance_Mutex</code>) prevents multiple instances or versions from running simultaneously.</li>
+</ul>
+<hr>
+<h2>5. Google Authentication (<code>credentials.json</code> &amp; OAuth2 Token)</h2>
+<h3>5.1 Role of the Two Authentication Artifacts</h3>
+<ul>
+<li><strong>OAuth Client Configuration (<code>credentials.json</code>)</strong>:</li>
+<li>Holds the Google Cloud Console <code>client_id</code> and <code>client_secret</code> authorized for <strong>Google People API</strong> (<code>https://www.googleapis.com/auth/contacts</code> scope).</li>
+<li><strong>Standard Build (<code>SyncContactsOG.exe</code>)</strong>: <code>credentials.json</code> is securely bundled inside the executable at compile time. End users do not need to supply or manage any <code>.json</code> file.</li>
+<li><strong>No-Key Build (<code>SyncContactsOG_NoKey.exe</code>)</strong>: Designed for custom Google Cloud projects; prompts the user to select a Desktop App <code>credentials.json</code> file on first login and stores it securely.</li>
+<li><strong>Access &amp; Refresh Token (<code>token</code>)</strong>:</li>
+<li>Generated automatically after the user grants consent in their web browser when clicking <code>Test Connection</code> or <code>Sync Now</code>.</li>
+<li><strong>Secure Storage</strong>: The OAuth2 token payload (including <code>refresh_token</code>) is stored encrypted inside <strong>Windows Credential Manager</strong> under a dedicated key bound to <code>SyncContactsOG</code> and the connected Google account. No plaintext <code>token.json</code> file is ever written to disk.</li>
+<li><strong>Silent Renewal</strong>: Unless revoked from Google Account security settings, expired access tokens are refreshed automatically in the background without user intervention.</li>
+</ul>
+<h3>5.2 Google Login Window &amp; Workflow</h3>
+<ul>
+<li>Enter your Gmail or Google Workspace address in the <strong>Google Account</strong> field and click <strong><code>Test Connection</code></strong> (or start a sync directly).</li>
+<li>If no valid token exists for that email address, the app opens your <strong>default web browser</strong> to the official Google sign-in page (<code>accounts.google.com</code>) while listening on a temporary local callback port (<code>localhost</code>).</li>
+<li>In the browser: select the matching Google account, approve access to Google Contacts (<em>Google People API</em>), and close the browser tab once the confirmation message appears.</li>
+<li>Back in <strong>SyncContactsOG</strong>: the email field locks to read-only mode to prevent accidental edits, and the connection status turns to <strong><code>✔ Connected</code></strong>.</li>
+<li><strong>Switching or Resetting Accounts</strong>: Click the <strong><code>✕</code></strong> button on the right side of the Google email field to unlock the input, clear the current session, and bind a different Google account.</li>
+</ul>
+<h3>5.3 Pre-Build Credential Resolution &amp; Validation Chain (<code>build.ps1</code>)</h3>
+<p>When building a standard release (<code>SyncContactsOG.exe</code>), <code>build.ps1</code> locates and validates <code>credentials.json</code> online against Google&#x27;s OAuth2 servers (<code>validate_creds.py</code>) in the following priority order, automatically skipping any corrupted or revoked file:</p>
+<ul>
+<li><code>credentials.json</code> placed next to the main executable (<code>$ProjectDir\credentials.json</code>).</li>
+<li>Local backup (<code>C:\Temp\credentials_backup.json</code>).</li>
+<li>Extracted from the existing main executable (<code>SyncContactsOG.exe</code>).</li>
+<li>Extracted from previous releases (<code>releases\SyncContactsOG_v*.exe</code>, newest to oldest).</li>
+</ul>
+<hr>
+<h2>6. Architecture &amp; Execution Flow</h2>
+<ul>
+<li><strong>Pre-flight Checks</strong>: Single-instance Mutex check, email validation, and archive folder write-permission verification.</li>
+<li><strong>Collection &amp; Canonicalization</strong>: Reads Outlook and Google contacts, normalizes every record into a canonical schema, and computes its SHA-256 hash.</li>
+<li><strong>Diff Calculation (Delta / Full)</strong>: Compares current hashes against <code>sync_state.db</code> (<code>contact_map</code>) to classify creations, updates, conflicts, and deletions.</li>
+<li><strong>Execution &amp; Live Logging</strong>: Applies API changes (with exponential backoff on HTTP 429 rate limits) and streams color-coded logs to the right console.</li>
+<li><strong>Post-Processing</strong>: Commits updates to <code>sync_state.db</code>, checks free disk space, and atomically writes <code>contacts_archive.db</code> and <code>contacts_archive.xlsx</code>.</li>
+</ul>
+<hr>
+<h2>7. Screen Specifications &amp; Detailed User Guide</h2>
+<h3>7.1 Main Window Overview</h3>
+<p>The main window uses a fixed two-column layout topped by a header bar:</p>
+<ul>
+<li><strong>Header Bar</strong>: Displays the application title, version (<code>vX.Y.Z</code>), language selector (<code>FR</code> / <code>EN</code>), and theme switcher (<code>Dark</code> / <code>Light</code>). Changes persist immediately.</li>
+<li><strong>Left Column (Controls &amp; Settings)</strong>: Contains 5 functional cards (<em>Accounts &amp; Profiles</em>, <em>Sync Mode</em>, <em>Options &amp; Safety</em>, <em>Windows Integration</em>, <em>Exclusive Contacts</em>).</li>
+<li><strong>Right Column (Execution Console)</strong>: Displays real-time progress and detailed operation logs.</li>
+</ul>
+<h3>7.2 Card-by-Card &amp; Modal Screen Details</h3>
+<h4>A. Card 1 — Accounts &amp; Profiles</h4>
+<ul>
+<li><strong>Outlook Account</strong>: Dropdown auto-detecting local Outlook profiles.</li>
+<li><strong>Connector Selector (Radio Buttons)</strong>:</li>
+<li><em>Outlook Classic COM</em>: Connects directly to the locally installed Outlook desktop client and displays the live contact count in parentheses.</li>
+<li><em>Microsoft 365 Graph API</em>: Connects to Microsoft 365 cloud via browser OAuth2 and displays the cloud contact count.</li>
+<li><strong>Google Account</strong>: Input box for Gmail/Google Workspace (locks to read-only once authenticated, with a <code>✕</code> reset button).</li>
+<li><strong><code>Test Connection</code> Button</strong>: Triggers the OAuth2 flow described in Section 5 and displays <code>✔ Connected</code>.</li>
+<li><strong>Auto-Sync (hours)</strong>: Numeric spinbox (<code>0</code> to <code>168</code>). <code>0</code> disables scheduled sync (manual only); any positive value N runs automatic sync every N hours.</li>
+</ul>
+<h4>B. Card 2 — Sync Mode</h4>
+<ul>
+<li><strong>5 Sync Modes (Radio Buttons with Fixed-Width Status Pills)</strong>:</li>
+<li>Each row displays the mode name, explanatory subtitle, and a uniform status pill (<code><span class="badge ok">✔ Tested</span></code> or <code><span class="badge warn">⚠ Untested</span></code>) with a hover tooltip.</li>
+<li><strong><code>Sync Now</code> Primary Button</strong>: Starts the synchronization worker thread (disabled while running to prevent duplicate triggers).</li>
+</ul>
+<h4>C. Card 3 — Options &amp; Safety</h4>
+<ul>
+<li><strong>Use FileAs field</strong>: Enables synchronization of Outlook&#x27;s <code>FileAs</code> display field.</li>
+<li><strong>Enforce FileAs format</strong>: Forces <code>Name SURNAME</code> or <code>SURNAME, Name</code> formatting on synced contacts.</li>
+<li><strong>Force overwrite RTF notes</strong>: Disabled by default (and greyed out in <em>Outlook → Google</em> mode) to protect rich-text Outlook notes from plain-text overwrites.</li>
+<li><strong>Sync photos</strong>: Enables SHA-256 comparison and two-way profile picture sync.</li>
+<li><strong>Sync deletions</strong>: Propagates contact deletions across platforms, guarded by <strong>Max deletions threshold</strong> to block accidental mass deletions.</li>
+<li><strong>Visual confirmation before deletion</strong>: Prompts a confirmation modal before each deletion.</li>
+<li><strong>Force Full Compare</strong>: Bypasses incremental cache and compares all fields across every contact.</li>
+<li><strong>Local Archive (<code>.db</code> + <code>.xlsx</code>)</strong>: Generates and updates the SQLite photo database and Excel workbook inside <code>contacts\</code>.</li>
+<li><strong>Dry-Run (Simulation Mode)</strong>: Runs full analysis and prints the preview summary <strong>without modifying any contact</strong> in Outlook or Google.</li>
+</ul>
+<h4>D. Cards 4a &amp; 4b — Windows Integration &amp; Exclusive Contacts</h4>
+<ul>
+<li><strong>Minimize to System Tray</strong>: Clicking the window close button (<code>✕</code>) hides the app into the Windows notification area instead of exiting. Double-clicking the tray icon restores the window; right-clicking provides <em>Open</em>, <em>Sync Now</em>, and <em>Exit</em>.</li>
+<li><strong>Run at Windows Startup</strong>: Registers <code>SyncContactsOG.exe --minimized</code> under <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</code> for silent startup in the System Tray.</li>
+<li><strong>Exclusive Contacts &amp; Force Mirror</strong>: Displays counts of contacts existing on only one platform. In one-way modes, <em>Force Mirror</em> strictly mirrors the source onto the target by removing extra target contacts.</li>
+</ul>
+<h4>E. Right Panel — Execution Console</h4>
+<ul>
+<li><strong>Search &amp; Filter Bar</strong>: Instantly filters log entries by keyword or severity (<code>Information</code>, <code>Warning</code>, <code>Error</code>).</li>
+</ul>
+<h4>F. Modal Dialogs (Secondary Screens)</h4>
+<ul>
+<li><strong>Conflict Resolution Dialog (<code>MERGE_PROMPT</code>)</strong>: Appears when a contact was modified on both sides since the last sync. Displays Outlook vs. Google values side by side and lets you keep <em>Outlook</em>, <em>Google</em>, or <em>Skip</em>.</li>
+<li><strong>Deletion Confirmation Dialog</strong>: Displays the contact details prior to deletion and asks for confirmation (<em>Yes</em> / <em>No</em>).</li>
+<li><strong>Archive Folder Picker (Read-Only Fallback)</strong>: If <code>SyncContactsOG.exe</code> runs from a read-only folder while Local Archive is enabled, prompts the user to pick a writable destination folder.</li>
+</ul>
+<h3>7.3 Typical User Workflows</h3>
+<ul>
+<li><strong>First Launch &amp; Safe Dry-Run</strong>:</li>
+<li>Launch <code>SyncContactsOG.exe</code> → verify detected Outlook profile → enter Google email and click <em>Test Connection</em> → select <em>Outlook → Google (One-Way)</em> → enable <em>Dry-Run (Simulation Mode)</em> → click <em>Sync Now</em> and review the preview summary in the right console.</li>
+<li><strong>Live Sync &amp; Background Automation</strong>:</li>
+<li>Uncheck <em>Dry-Run</em> → click <em>Sync Now</em> → set <em>Auto-Sync (hours)</em> to <code>4</code> → enable <em>Minimize to System Tray</em> and <em>Run at Windows Startup</em>.</li>
+<li><strong>Browsing Local Archives</strong>:</li>
+<li>Open <code>contacts\</code> next to the executable to view <code>contacts_archive.xlsx</code> in Excel or query <code>contacts_archive.db</code>.</li>
+</ul>
+<hr>
+<h2>8. Non-Functional Requirements &amp; Security</h2>
+<ul>
+<li><strong>API Resilience</strong>: Automatic handling of transient network errors and Google People API rate limits using exponential backoff.</li>
+<li><strong>Transactional Integrity</strong>: SQLite archive updates are written to a temporary file before atomic replacement (<code>shutil.move</code>) to prevent corruption.</li>
+<li><strong>Bilingual UI</strong>: Dynamic French (<code>FR</code>) and English (<code>EN</code>) interface and tooltips, with Dark and Light themes.</li>
+</ul>
+<hr>
+<h2>9. Sync Mode Validation Matrix (Current Status)</h2>
+<table><thead><tr><th>Synchronization Mode</th><th>Internal Code</th><th>Validation Status</th><th>UI Badge</th></tr></thead><tbody>
+<tr><td>Outlook → Google (One-Way)</td><td><code>OUTLOOK_TO_GOOGLE_ONLY</code></td><td>Validated and tested in production</td><td><code><span class="badge ok">✔ Tested</span></code></td></tr>
+<tr><td>Google → Outlook (One-Way)</td><td><code>GOOGLE_TO_OUTLOOK_ONLY</code></td><td>Pending field validation</td><td><code><span class="badge warn">⚠ Untested</span></code></td></tr>
+<tr><td>Two-Way (Outlook priority)</td><td><code>MERGE_OUTLOOK_WINS</code></td><td>Pending field validation</td><td><code><span class="badge warn">⚠ Untested</span></code></td></tr>
+<tr><td>Two-Way (Google priority)</td><td><code>MERGE_GOOGLE_WINS</code></td><td>Pending field validation</td><td><code><span class="badge warn">⚠ Untested</span></code></td></tr>
+<tr><td>Two-Way (Prompt on conflict)</td><td><code>MERGE_PROMPT</code></td><td>Pending field validation</td><td><code><span class="badge warn">⚠ Untested</span></code></td></tr>
+</tbody></table></div></body></html>

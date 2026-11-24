@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SyncContactsOG — Changelog</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; color: #1e293b; background: #f8fafc; }
+  h1 { color: #0f172a; border-bottom: 2px solid #1a73e8; padding-bottom: 0.4rem; }
+  h2 { color: #1a73e8; margin-top: 2rem; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.25rem; }
+  h3 { color: #334155; margin-top: 1.3rem; }
+  code { background: #e2e8f0; padding: 0.15rem 0.35rem; border-radius: 4px; font-family: Consolas, monospace; font-size: 0.9em; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 1.1rem 1.25rem; border-radius: 8px; overflow-x: auto; line-height: 1.45; }
+  pre code { background: transparent; color: inherit; padding: 0; white-space: pre; display: block; }
+  ul { padding-left: 1.4rem; }
+  li { margin-bottom: 0.35rem; }
+  hr { border: 0; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
+</style>
+</head>
+<body>
+<p>﻿# Changelog - SyncContactsOG</p>
+<p>All notable changes to <strong>SyncContactsOG</strong> are documented in this file.</p>
+<h2>[1.1.1] - 2026-11-23</h2>
+<h3>Fixed</h3>
+<ul>
+<li><strong>Unified Portable Archive Folder</strong>: Replaced legacy <code>SyncContactsOG_Archive</code> references with <code>.\contacts\</code> (storing <code>contacts.db</code> and <code>contacts.xlsx</code>).</li>
+<li><strong>Documentation &amp; Release Standardization</strong>: Unified <code>CHANGELOG.md</code> history, lowercase <code>docs/</code> assets (Markdown + HTML), and GitHub Release packaging with SHA-256 checksums.</li>
+</ul>
+<h2>[1.1.0] - 2026-11-23</h2>
+<h3>Added</h3>
+<ul>
+<li><strong>Google People API v1 Engine</strong>: Native OAuth 2.0 flow (<code>https://www.googleapis.com/auth/contacts</code>) with automatic token refresh (<code>.\data\google_token.json</code>).</li>
+<li><strong>Guided OAuth Setup Dialog</strong>: Live <code>credentials.json</code> validation, People API connectivity verification, blue alert highlighting on failed diagnostics, and step-by-step Google Cloud Console guide.</li>
+<li><strong>Portable Storage Layout</strong>: Isolated <code>.\data\</code> (OAuth credentials &amp; token) and <code>.\contacts\</code> (SQLite/Excel backups) relative to the executable.</li>
+<li><strong>Bilingual UI (EN / FR) &amp; Compact Layout</strong>: Dynamic <code>Configure Google Connection</code> / <code>Configurer la Connexion Google</code> button with status indicator (<code>✓</code> / <code>✗</code>) and maximized log panel height.</li>
+</ul>
+<h2>[1.0.11] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Calcul et alignement exact de la largeur de <strong>Synchronization Mode</strong> (card_mode) sur la largeur totale de la colonne inférieure (card_opts + win_stack), alignant son bord droit au pixel près avec <strong>Light / Dark</strong>, <strong>Windows Integration</strong> et <strong>Exclusive contacts</strong>.</li>
+</ul>
+<h2>[1.0.10] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Suppression du widget parasite sous l&#x27;option <strong>Simulation Mode</strong> en bas à gauche.</li>
+<li>Alignement horizontal exact du bord inférieur des trois conteneurs inférieurs (<strong>Options &amp; Data Integrity</strong>, <strong>Exclusive contacts</strong> et la zone noire des logs à droite).</li>
+</ul>
+<h2>[1.0.9] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Ajustement de la hauteur (34 px) et de la marge inférieure de la ligne Auto-Sync dans <strong>Accounts &amp; Profiles</strong> afin que [ - ] [ 6 ] [ + ] s&#x27;affiche sans aucune coupure DPI.</li>
+<li>Extension verticale (expand=True,</li>
+</ul>
+<p>ill=&quot;both&quot;, weight=1) des cartes inférieures gauches (<strong>Options &amp; Data Integrity</strong> et <strong>Exclusive contacts</strong>) pour aligner leur bord inférieur sur la zone noire des logs à droite.</p>
+<h2>[1.0.8] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Suppression de la hauteur fixe sur la ligne Auto-Sync et ajout de marge basse symétrique dans les deux cartes supérieures pour afficher intégralement [ - ] [ 6 ] [ + ] sans aucune coupure.</li>
+<li>Étirement vertical (weight=1, sticky=&quot;nsew&quot;) de la rangée inférieure gauche (<strong>Options &amp; Data Integrity</strong> et <strong>Exclusive contacts</strong>) afin que leur bord inférieur soit aligné avec le bas de la zone noire des logs à droite.</li>
+</ul>
+<h2>[1.0.7] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Augmentation symétrique de l&#x27;espacement inférieur dans les boîtes <strong>Accounts &amp; Profiles</strong> et <strong>Synchronization Mode</strong> afin que le sélecteur [ - ] [ 6 ] [ + ] ne soit plus rogné en bas.</li>
+</ul>
+<h2>[1.0.6] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Suppression du doublon de version dans le grand titre d&#x27;en-tête (SyncContactsOG uniquement dans l&#x27;en-tête, SyncContactsOG — v1.0.6 conservé dans la barre de titre Windows).</li>
+<li>Reconstruction en grille 3 colonnes (102x28 px, grid_propagate(False)) du sélecteur numérique Auto-Sync afin d&#x27;afficher simultanément [ - ], le champ d&#x27;heures et [ + ].</li>
+</ul>
+<h2>[1.0.5] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Affichage permanent de la version (SyncContactsOG — v1.0.5 dans la barre de titre Windows et SyncContactsOG   v1.0.5 dans l&#x27;en-tête principal, persistant lors du basculement FR/EN).</li>
+<li>Suppression de la contrainte de largeur fixe sur le conteneur du sélecteur Auto-Sync afin d&#x27;afficher en entier [ - ] [ 6 ] [ + ].</li>
+</ul>
+<h2>[1.0.4] - 2026-11-22</h2>
+<h3>Modifié</h3>
+<ul>
+<li>Ergonomie du sélecteur d&#x27;heures Auto-Sync : le champ numérique est désormais encadré par le bouton <strong>-</strong> à gauche et le bouton <strong>+</strong> à droite ([ - ] [ 6 ] [ + ]).</li>
+</ul>
+<h2>[1.0.3] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Alignement horizontal côte à côte (- et +, 26x26 px) des boutons de réglage de l&#x27;intervalle Auto-Sync pour éviter le chevauchement vertical.</li>
+</ul>
+<h2>[1.0.2] - 2026-11-22</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Affichage effectif de la version (SyncContactsOG — v1.0.2 dans la barre de titre et badge bleu</li>
+</ul>
+<p>1.0.2 à côté du titre principal).</p>
+<ul>
+<li>Remplacement des micro-flèches comprimées (▲/▼) du réglage d&#x27;intervalle Auto-Sync par des boutons + et - lisibles.</li>
+</ul>
+<h2>[1.0.1] - 2026-11-21</h2>
+<h3>Ajouté</h3>
+<ul>
+<li>Boutons <strong>Tout sélectionner</strong> / <strong>Tout désélectionner</strong> (FR/EN) dans la fenêtre <em>Contacts présents sur un seul compte</em> à côté du bouton <em>Supprimer la sélection</em>.</li>
+<li>Affichage visible de la version (</li>
+</ul>
+<p>1.0.1) dans la barre de titre de la fenêtre et dans l&#x27;en-tête principal à côté du titre SyncContactsOG.</p>
+<h2>[1.0.0] - 2026-11-21</h2>
+<h3>Version Majeure — Première Release de Production</h3>
+<ul>
+<li><strong>Architecture &amp; Build</strong> : séparation stricte</li>
+</ul>
+<p>acine / contacts_archive / doc /</p>
+<p>eleases / source, avec génération systématique des deux exécutables (SyncContactsOG_v1.0.0.exe avec identifiants OAuth2 intégrés et SyncContactsOG_v1.0.0_NoCreds.exe sans identifiants).</p>
+<ul>
+<li><strong>Documentation &amp; Blueprint</strong> : génération automatique des 4 guides HTML (SPECIFICATIONS_FR.html, SPECIFICATIONS_EN.html, CHANGELOG.html, BEST_PRACTICES.html) dans doc\ et archivage complet dans</li>
+</ul>
+<p>eleases\.</p>
+<ul>
+<li><strong>Interface &amp; Fiabilité</strong> : affichage dynamique de la version (SyncContactsOG — v1.0.0) dans le titre et en pied de page, libellés bilingues FR/EN harmonisés, barre de progression strictement monotone et auto-réparation SQLite (PRAGMA integrity_check) sur contacts_archive.db.</li>
+</ul>
+<h2>[0.2.12] - 2026-11-21</h2>
+<h3>Ajouté &amp; Corrigé</h3>
+<ul>
+<li>Génération systématique de deux exécutables par version : SyncContactsOG_vX.Y.Z.exe (avec credentials.json intégré) et SyncContactsOG_vX.Y.Z_NoCreds.exe (sans credentials.json).</li>
+<li>Affichage dynamique de la version (__version__) dans le titre de la fenêtre et en discret badge en bas à droite de l&#x27;interface.</li>
+<li>Arrêt silencieux de l&#x27;instance active via Get-Process dans uild.ps1 (sans erreur lorsque l&#x27;application est déjà fermée).</li>
+</ul>
+<h2>[0.2.11] - 2026-11-21</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Mise à jour de la traduction française du commutateur d&#x27;archivage local : Conserver une Archive Locale (.db avec photos + .xlsx) (avec conservation de l&#x27;info-bulle au survol).</li>
+</ul>
+<h2>[0.2.10] - 2026-11-21</h2>
+<h3>Modifié</h3>
+<ul>
+<li>Clarification du libellé de l&#x27;option d&#x27;archivage local dans l&#x27;interface : Keep a Local Archive (.db with photos + .xlsx) (avec conservation de l&#x27;info-bulle explicative au survol).</li>
+</ul>
+<h2>[0.2.9] - 2026-11-21</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Vérification d&#x27;intégrité SQLite (PRAGMA integrity_check) avant toute mise à jour incrémentale de contacts_archive.db, avec reconstruction complète automatique en cas de fichier endommagé (database disk image is malformed).</li>
+</ul>
+<h2>[0.2.8] - 2026-11-21</h2>
+<h3>Corrigé</h3>
+<ul>
+<li>Alignement de la barre de progression globale lors de la génération de l&#x27;archive locale post-synchronisation (95 % – 99 % — Étape 5/5 au lieu d&#x27;un retour visuel à 20 % — Étape 2/5).</li>
+<li>Correction de l&#x27;interpolation dynamique des compteurs de sous-étape lors de la lecture COM Outlook et de la normalisation Google.</li>
+</ul>
+<h2>[0.2.6] - 2026-11-21</h2>
+<h3>Modifié</h3>
+<ul>
+<li>Restauration de l&#x27;agencement équilibré des panneaux de configuration et de la console.</li>
+<li>Positionnement des boutons Nettoyer directement sous chaque ligne respective (Contacts exclusifs Outlook et Contacts exclusifs Google) avec une largeur confortable (115 px) pour éviter toute troncature.</li>
+</ul>
+<h2>[0.2.5] - 2026-11-21</h2>
+<h3>Modifié</h3>
+<ul>
+<li>Harmonisation de la liste déroulante du format Classer sous (Prénom NOM / NOM, Prénom) avec le style neutre discret du bouton Tester la connexion.</li>
+<li>Élargissement du bouton Nettoyer (section <em>Contacts exclusifs</em>) pour afficher intégralement le libellé sans troncature.</li>
+</ul>
+<h2>[0.2.4] - 2026-11-21</h2>
+<h3>Modifié</h3>
+<ul>
+<li>Atténuation visuelle du bouton Tester la connexion et de la liste déroulante du format Classer sous (Prénom NOM / NOM, Prénom) avec un style neutre discret adapté aux thèmes Clair et Sombre, afin de réserver le bleu vif à l&#x27;action principale Lancer maintenant.</li>
+</ul>
+<h2>[0.2.3] - 2026-11-21</h2>
+<h3>Modifié &amp; Ajouté</h3>
+<ul>
+<li>Harmonisation visuelle de la pilule ✔ Testé au même format gris neutre et largeur fixe (84px) que ⚠ Non testé.</li>
+<li>Ajout de SPECIFICATIONS.md (spécifications fonctionnelles, techniques et guide détaillé des écrans) et génération automatique de la version HTML autonome à chaque release.</li>
+</ul>
+<h2>[0.2.2] - 2026-11-21</h2>
+<h3>Modifié &amp; Ajouté</h3>
+<ul>
+<li>Ajout de pilules de statut de largeur fixe (84px) à droite de chaque mode de synchronisation : ✔ Testé (blanc) pour Outlook → Google et ⚠ Non testé (niveaux de gris) avec infobulle d&#x27;avertissement au survol pour les autres modes.</li>
+<li>Refonte visuelle des boutons radio (modes de synchronisation et connecteurs Outlook COM / Microsoft 365 Graph API) avec anneau fin clair et point central blanc.</li>
+</ul>
+<h2>[0.2.1] - 2026-11-21</h2>
+<h3>Ajouté</h3>
+<ul>
+<li>Protection d&#x27;instance unique via Mutex Windows (Local\SyncContactsOG_SingleInstance_Mutex) empêchant toute exécution simultanée de plusieurs versions ou fenêtres de l&#x27;application.</li>
+</ul>
+<h2>[0.2.0] - 2026-11-21</h2>
+<h3>Modifié &amp; Ajouté</h3>
+<ul>
+<li>Architecture portable propre : déplacement des fichiers techniques (sync_state.db, sync_details.log, ackups/) vers %LOCALAPPDATA%\SyncContactsOG\.</li>
+<li>Stockage automatique de l&#x27;archive locale (contacts_archive.db + .xlsx) dans un sous-dossier dédié SyncContactsOG_Archive\ à côté de l&#x27;exécutable.</li>
+<li>Repli interactif avec sélecteur de dossier si le répertoire de l&#x27;exécutable est en lecture seule.</li>
+<li>Détection d&#x27;espace disque insuffisant avec renommage automatique de l&#x27;archive existante en *_NOT_UP_TO_DATE.</li>
+</ul>
+<h2>[0.1.0] - 2026-11-21</h2>
+<h3>Ajouté</h3>
+<ul>
+<li>Synchronisation bidirectionnelle et unidirectionnelle Outlook (COM / Graph API) &lt;-&gt; Google Contacts.</li>
+<li>Stockage sécurisé du jeton OAuth et de la clé client JSON via Windows Credential Manager (DPAPI).</li>
+<li>Assistant visuel en 4 étapes (Projet, Branding/Audience, Client OAuth, Importation) avec sélecteur de compte Google anti-redirection SSO M365.</li>
+<li>Interface bilingue FR/EN, thème Clair/Sombre, mappage dynamique du format « Classer sous » (<code>Prénom NOM</code> / <code>NOM, Prénom</code>), et indicateur System Tray orange pour les contacts exclusifs.</li>
+</ul>
+</body>
+</html>
